@@ -1,0 +1,11 @@
+salary <- read.csv('C:/Users/Bogdan/Desktop/Salaries.csv')
+battling <- read.csv('C:/Users/Bogdan/Desktop/Batting.csv')
+#Creation of required metrics 
+battling$bavg <- battling$H/battling$AB
+battling$X1B <- battling$H - battling$X2B - battling$X3B - battling$HR
+battling$OBP <- (battling$H + battling$BB + battling$HBP)/ ( battling$AB + battling$BB + battling$HBP + battling$SF)
+battling$SLG <- (battling$X1B + 2*battling$X2B + 3*battling$X3B + 4*battling$HR)/ battling$AB
+
+battling <- subset(battling, yearID > 1984)
+
+df <- merge(battling,salary, by = c('playerID','yearID'))

@@ -1,25 +1,48 @@
+library(dplyr)
 library(ggplot2)
-library(data.table)
-df <- fread('C:/Users/Bogdan/Desktop/Economist_Assignment_Data.csv',drop=1)
-pointsToLabel <- c("Russia", "Venezuela", "Iraq", "Myanmar", "Sudan",
-                   "Afghanistan", "Congo", "Greece", "Argentina", "Brazil",
-                   "India", "Italy", "China", "South Africa", "Spane",
-                   "Botswana", "Cape Verde", "Bhutan", "Rwanda", "France",
-                   "United States", "Germany", "Britain", "Barbados", "Norway", "Japan",
-                   "New Zealand", "Singapore")
+library(plotly)
 
-pl1 <- ggplot(df, aes( x = CPI, y = HDI))
+salary <- read.csv('C:/Users/Bogdan/Desktop/Salaries.csv')
+battling <- read.csv('C:/Users/Bogdan/Desktop/Batting.csv')
+#Creation of required metrics 
+battling$bavg <- battling$H/battling$AB
+battling$X1B <- battling$H - battling$X2B - battling$X3B - battling$HR
+battling$OBP <- (battling$H + battling$BB + battling$HBP)/ ( battling$AB + battling$BB + battling$HBP + battling$SF)
+battling$SLG <- (battling$X1B + 2*battling$X2B + 3*battling$X3B + 4*battling$HR)/ battling$AB
+#Since the data in salary begins from 1985 and batling data dates to the earlier period, let`s filter and merge data frames
+battling <- subset(battling, yearID > 1984)
+df <- merge(battling,salary, by = c('playerID','yearID'))
+# Identifying lost players in the whole data by using pipe operator
+players <- c('giambja01','damonjo01','saenzol01')
+lost.players <- subset(df, playerID %in% players ) 
+lost.players <- subset(lost.players, yearID == 2001)
+lost.players <-subset(lost.players, select= c(yearID,playerID,H,X2B,X3B,HR,OBP,SLG,bavg,AB))
 
-pl2<- pl1 + geom_point(aes(color = Region), size = 3, shape = 1) + ggtitle('Corruption and Human Development')
+#The total combined salary of the three players can not exceed 15 million dollars.
+#Their combined number of At Bats (AB) needs to be equal to or greater than the lost players.
+#Their mean OBP had to equal to or greater than the mean OBP of the lost players
 
-pl3 <- pl2 +geom_smooth(aes(group = 1),method = 'lm',
-                        formula = y ~ log(x),
-                        se = FALSE,
-                        color = 'red')+
-  scale_x_continuous(name= 'Corruption Perceptions Index (10 - least corrupt)',breaks = 1:10) +
-  scale_y_continuous( name = 'Human Development Index, 2011, (1=best)')
-pl4 <- pl3 + geom_text(aes(label= Country), color = 'grey20',
-                       data = subset(df, Country %in% pointsToLabel),check_overlap = TRUE)
-pl4 <- ggplotly(pl4)
+ 
+clear.df <- clear.df[complete.cases(clear.df),]
+clear.df <- subset(clear.df, OBP != 0 & OBP != 0.5 & OBP != 1)
+mean(clear.df$OBP)
+factorA <- mean(lost.players$OBP)
+factorB <- (sum(lost.players$AB))/3
 
-print(pl4)
+clear.df <- clear.df[,c("playerID",'salary','AB','OBP')]
+clear.df <- subset(clear.df, AB > factorB)
+clear.df <- subset(clear.df, OBP > factorA)
+clear.df<- arrange(clear.df,salary,desc(OBP),desc(AB))
+
+pl1<-ggplot(clear.df,aes(OBP, AB)) + geom_point(aes(color = salary)) + xlab("On Base Percentage") +
+  ylab("At bat")
+pl2 <- pl1 + scale_fill_discrete(name="Amount of salary",
+                                 labels=c("Control", "Treatment 1", "Treatment 2", 'bla'))
+pl3 <- pl2 + scale_color_gradient(low = '#02d0ff', high = '#161616')
+gpl<-ggplotly(pl3) 
+
+print(gpl)
+#head(clear.df)
+
+#print(format(sal2, scientific=F))
+
